@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU Scheduling Algorithms Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #1a1a2e 50%, var(--bg-primary) 100%);
+            min-height: 100vh;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .glass-input,
+        .glass-select {
+            background: rgba(51, 65, 85, 0.5);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 8px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .glass-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        .glass-select {
+            cursor: pointer;
+        }
+
+        .gradient-btn {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .gradient-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+        }
+
+        .gradient-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .secondary-btn {
+            background: rgba(51, 65, 85, 0.7);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-weight: 600;
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .secondary-btn:hover {
+            background: rgba(71, 85, 105, 0.7);
+            border-color: var(--accent-primary);
+        }
+
+        .danger-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .danger-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .pause-btn {
+            background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+        }
+
+        .pause-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .pause-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .gantt-container {
+            overflow-x: auto;
+            padding: 20px 0;
+        }
+
+        .gantt-chart {
+            display: flex;
+            align-items: center;
+            min-height: 60px;
+            gap: 2px;
+        }
+
+        .gantt-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            height: 50px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            position: relative;
+            opacity: 0;
+            transform: scale(0.8) translateY(10px);
+        }
+
+        .gantt-block.visible {
+            animation: ganttBlockAppear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .gantt-block.active {
+            animation: ganttBlockActive 1s ease-in-out infinite;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        .gantt-block:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .gantt-block .time-label {
+            position: absolute;
+            bottom: -20px;
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+
+        @keyframes ganttBlockAppear {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) translateY(10px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        @keyframes ganttBlockActive {
+
+            0%,
+            100% {
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(255, 255, 255, 0.6);
+            }
+        }
+
+        .process-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .process-table th {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--text-primary);
+            font-weight: 600;
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .process-table th:first-child {
+            border-radius: 8px 0 0 0;
+        }
+
+        .process-table th:last-child {
+            border-radius: 0 8px 0 0;
+        }
+
+        .process-table td {
+            padding: 12px 16px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .process-table tr.visible td {
+            animation: tableRowAppear 0.4s ease forwards;
+        }
+
+        .process-table tr:hover td {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        @keyframes tableRowAppear {
+            0% {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-value.counting {
+            animation: countPulse 0.3s ease;
+        }
+
+        @keyframes countPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .process-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .remove-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .remove-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .algorithm-info {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid #6366f1;
+            padding: 12px 16px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .process-input-row {
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .scrollbar-thin::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: rgba(51, 65, 85, 0.3);
+            border-radius: 4px;
+        }
+
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 4px;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .speed-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(99, 102, 241, 0.3);
+        }
+
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #6366f1;
+            cursor: pointer;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #a855f7);
+            transition: width 0.3s ease;
+        }
+
+        .info-icon {
+            width: 16px;
+            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(99, 102, 241, 0.3);
+            color: #a5b4fc;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-left: 4px;
+        }
+
+        .info-icon:hover {
+            background: rgba(99, 102, 241, 0.5);
+            transform: scale(1.1);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .modal-close:hover {
+            background: rgba(239, 68, 68, 0.3);
+        }
+
+        .modal-body {
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+
+        .modal-formula {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-family: monospace;
+            color: #a5b4fc;
+        }
+    </style>
+</head>
+
+<body class="text-gray-100">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <header class="text-center mb-10">
+            <h1
+                class="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                CPU Scheduling Visualizer</h1>
+            <p class="text-gray-400 text-lg">Visualize and compare different CPU scheduling algorithms</p>
+        </header>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-1">
+                <div class="glass-card p-6 mb-6">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Configuration
+                    </h2>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Scheduling Algorithm</label>
+                        <select id="algorithm" class="glass-select w-full p-3">
+                            <option value="fcfs">FCFS (First-Come, First-Served)</option>
+                            <option value="sjf-np">SJF (Non-Preemptive)</option>
+                            <option value="sjf-p">SJF (Preemptive - SRTF)</option>
+                            <option value="rr">Round Robin</option>
+                            <option value="priority-np">Priority (Non-Preemptive)</option>
+                            <option value="priority-p">Priority (Preemptive)</option>
+                        </select>
+                    </div>
+                    <div id="quantumContainer" class="mb-4 hidden">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Time Quantum</label>
+                        <input type="number" id="timeQuantum" min="1" value="2" class="glass-input w-full p-3">
+                    </div>
+                    <div id="algorithmInfo" class="algorithm-info text-sm text-gray-300">
+                        <strong>FCFS:</strong> Processes are executed in the order they arrive. Simple but may cause
+                        convoy effect.
+                    </div>
+                    <div class="speed-control">
+                        <span class="text-sm text-gray-400">Speed:</span>
+                        <input type="range" id="speedSlider" class="speed-slider flex-1" min="100" max="1000"
+                            value="500">
+                        <span id="speedLabel" class="text-sm text-gray-400">500ms</span>
+                    </div>
+                </div>
+                <div class="glass-card p-6">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        Add Processes
+                    </h2>
+                    <div id="processInputs" class="space-y-3 mb-4 max-h-64 overflow-y-auto"></div>
+                    <button id="addProcessBtn" class="secondary-btn w-full flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Process
+                    </button>
+                    <div class="grid grid-cols-3 gap-2 mt-4">
+                        <button id="runBtn" class="gradient-btn flex items-center justify-center gap-2">
+                            <svg id="runIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            </svg>
+                            Run
+                        </button>
+                        <button id="pauseBtn" class="pause-btn flex items-center justify-center gap-2" disabled>
+                            <svg id="pauseIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 9v6m4-6v6" />
+                            </svg>
+                            <span id="pauseText">Pause</span>
+                        </button>
+                        <button id="resetBtn" class="danger-btn flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Reset
+                        </button>
+                    </div>
+                    <div class="progress-bar mt-3">
+                        <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="lg:col-span-2 space-y-6">
+                <div class="glass-card p-6">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Gantt Chart
+                        <span id="currentTime" class="ml-auto text-sm text-gray-400"></span>
+                    </h2>
+                    <div id="ganttContainer" class="gantt-container scrollbar-thin">
+                        <div class="empty-state">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="mx-auto">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            <p>Add processes and click "Run" to see the Gantt chart</p>
+                        </div>
+                    </div>
+                    <div id="processLegend" class="flex flex-wrap gap-2 mt-4"></div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="stat-card">
+                        <div class="text-sm text-gray-400 mb-1">Avg. Waiting Time<span class="info-icon"
+                                onclick="showModal('waiting')">i</span></div>
+                        <div class="stat-value" id="avgWaitingTime">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="text-sm text-gray-400 mb-1">Avg. Turnaround Time<span class="info-icon"
+                                onclick="showModal('turnaround')">i</span></div>
+                        <div class="stat-value" id="avgTurnaroundTime">-</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="text-sm text-gray-400 mb-1">Total Processes<span class="info-icon"
+                                onclick="showModal('processes')">i</span></div>
+                        <div class="stat-value" id="totalProcesses">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="text-sm text-gray-400 mb-1">CPU Utilization<span class="info-icon"
+                                onclick="showModal('cpu')">i</span></div>
+                        <div class="stat-value" id="cpuUtilization">-</div>
+                    </div>
+                </div>
+                <div class="glass-card p-6">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Process Details
+                    </h2>
+                    <div class="overflow-x-auto">
+                        <table class="process-table" id="resultsTable">
+                            <thead>
+                                <tr>
+                                    <th>Process</th>
+                                    <th>Arrival</th>
+                                    <th>Burst</th>
+                                    <th>Priority</th>
+                                    <th>Completion</th>
+                                    <th>Turnaround</th>
+                                    <th>Waiting</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsBody">
+                                <tr>
+                                    <td colspan="7" class="text-center text-gray-500 py-8">No results yet. Add processes
+                                        and run the simulation.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="infoModal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Title</h3>
+                <button class="modal-close" onclick="hideModal()">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">Content</div>
+        </div>
+    </div>
+
+    <script>
+        const PROCESS_COLORS = [
+            'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+            'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
+            'linear-gradient(135deg, #14b8a6 0%, #10b981 100%)',
+            'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)',
+            'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+            'linear-gradient(135deg, #8b5cf6 0%, #d946ef 100%)',
+            'linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%)',
+            'linear-gradient(135deg, #84cc16 0%, #22c55e 100%)'
+        ];
+        const SOLID_COLORS = ['#6366f1', '#ec4899', '#14b8a6', '#f59e0b', '#3b82f6', '#8b5cf6', '#06b6d4', '#84cc16'];
+        const ALGORITHM_INFO = {
+            'fcfs': '<strong>FCFS:</strong> Processes executed in arrival order.',
+            'sjf-np': '<strong>SJF (Non-Preemptive):</strong> Shortest burst time first, runs to completion.',
+            'sjf-p': '<strong>SJF (Preemptive - SRTF):</strong> Shortest remaining time always runs.',
+            'rr': '<strong>Round Robin:</strong> Fixed time quantum, fair scheduling.',
+            'priority-np': '<strong>Priority (Non-Preemptive):</strong> Highest priority first. Lower number = higher priority.',
+            'priority-p': '<strong>Priority (Preemptive):</strong> Highest priority always runs.'
+        };
+
+        let processCounter = 0, animationState = { running: false, paused: false, currentIndex: 0, ganttData: [], processData: [], timeouts: [], shownProcesses: new Set() };
+        const $ = id => document.getElementById(id);
+
+        $('algorithm').addEventListener('change', () => {
+            const algo = $('algorithm').value;
+            $('quantumContainer').classList.toggle('hidden', algo !== 'rr');
+            $('algorithmInfo').innerHTML = ALGORITHM_INFO[algo];
+            document.querySelectorAll('.priority-container').forEach(el => el.classList.toggle('hidden', !algo.includes('priority')));
+        });
+        $('addProcessBtn').addEventListener('click', () => addProcess());
+        $('runBtn').addEventListener('click', runSimulation);
+        $('pauseBtn').addEventListener('click', togglePause);
+        $('resetBtn').addEventListener('click', resetAll);
+        $('speedSlider').addEventListener('input', e => $('speedLabel').textContent = e.target.value + 'ms');
+
+        function addProcess(arrival = 0, burst = 1, priority = 1) {
+            const id = processCounter++;
+            const div = document.createElement('div');
+            div.className = 'process-input-row p-3 rounded-lg bg-slate-700/50 border border-slate-600/50';
+            div.id = `process-${id}`;
+            const isPriority = $('algorithm').value.includes('priority');
+            div.innerHTML = `
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="color-dot" style="background: ${SOLID_COLORS[id % 8]}"></div>
+                    <span class="font-medium text-sm">P${id}</span>
+                    <button class="remove-btn ml-auto text-xs" onclick="this.closest('.process-input-row').remove()">Remove</button>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div><label class="text-xs text-gray-400">Arrival</label><input type="number" min="0" value="${arrival}" class="glass-input w-full p-2 text-sm arrival-input"></div>
+                    <div><label class="text-xs text-gray-400">Burst</label><input type="number" min="1" value="${burst}" class="glass-input w-full p-2 text-sm burst-input"></div>
+                    <div class="priority-container ${isPriority ? '' : 'hidden'}"><label class="text-xs text-gray-400">Priority</label><input type="number" min="1" value="${priority}" class="glass-input w-full p-2 text-sm priority-input"></div>
+                </div>`;
+            $('processInputs').appendChild(div);
+            $('totalProcesses').textContent = document.querySelectorAll('.process-input-row').length;
+        }
+
+        function getProcesses() {
+            return [...document.querySelectorAll('.process-input-row')].map((el, i) => {
+                const id = parseInt(el.id.replace('process-', ''));
+                return {
+                    id: `P${id}`, arrival: parseInt(el.querySelector('.arrival-input').value) || 0,
+                    burst: parseInt(el.querySelector('.burst-input').value) || 1,
+                    remaining: parseInt(el.querySelector('.burst-input').value) || 1,
+                    priority: parseInt(el.querySelector('.priority-input')?.value) || 1,
+                    colorIndex: id % 8
+                };
+            });
+        }
+
+        function runSimulation() {
+            const processes = getProcesses();
+            if (!processes.length) return alert('Add at least one process!');
+            stopAnimation();
+            const algo = $('algorithm').value, quantum = parseInt($('timeQuantum').value) || 2;
+            let result;
+            switch (algo) {
+                case 'fcfs': result = scheduleFCFS(processes); break;
+                case 'sjf-np': result = scheduleSJFNP(processes); break;
+                case 'sjf-p': result = scheduleSJFP(processes); break;
+                case 'rr': result = scheduleRR(processes, quantum); break;
+                case 'priority-np': result = schedulePriorityNP(processes); break;
+                case 'priority-p': result = schedulePriorityP(processes); break;
+            }
+            animationState.ganttData = result.gantt;
+            animationState.processData = result.processes;
+            startAnimation();
+        }
+
+        function startAnimation() {
+            animationState.running = true; animationState.paused = false; animationState.currentIndex = 0;
+            animationState.shownProcesses = new Set();
+            $('pauseBtn').disabled = false; $('runBtn').disabled = true;
+            $('pauseText').textContent = 'Pause';
+            $('pauseIcon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/>';
+            $('ganttContainer').innerHTML = '<div class="gantt-chart" id="ganttChart"></div>';
+            $('resultsBody').innerHTML = '';
+            renderLegend(animationState.processData);
+            animateNextBlock();
+        }
+
+        function animateNextBlock() {
+            if (!animationState.running) return;
+            if (animationState.paused) return;
+            const { ganttData, currentIndex, processData, shownProcesses } = animationState;
+            if (currentIndex >= ganttData.length) { finishAnimation(); return; }
+            const block = ganttData[currentIndex];
+            const totalTime = ganttData[ganttData.length - 1].end;
+            const blockWidth = Math.max(40, Math.min(80, 600 / totalTime));
+            const width = (block.end - block.start) * blockWidth;
+            const isIdle = block.process === 'Idle';
+            const style = isIdle ? 'background: linear-gradient(135deg, #475569, #64748b); opacity: 0.5;' : `background: ${PROCESS_COLORS[block.colorIndex]};`;
+            const div = document.createElement('div');
+            div.className = 'gantt-block';
+            div.style.cssText = style + `width: ${width}px;`;
+            div.innerHTML = `<span>${block.process}</span><span class="time-label">${block.start}</span>`;
+            $('ganttChart').appendChild(div);
+            setTimeout(() => div.classList.add('visible'), 10);
+            $('currentTime').textContent = `Time: ${block.start} - ${block.end}`;
+            $('progressFill').style.width = ((currentIndex + 1) / ganttData.length * 100) + '%';
+
+            // Check if any process completed at this block's end time and add to table
+            processData.forEach(p => {
+                if (p.completion === block.end && !shownProcesses.has(p.id)) {
+                    shownProcesses.add(p.id);
+                    addProcessRow(p);
+                }
+            });
+
+            // Add final time label
+            if (currentIndex === ganttData.length - 1) {
+                const endLabel = document.createElement('span');
+                endLabel.className = 'text-xs text-gray-400 ml-1';
+                endLabel.textContent = block.end;
+                $('ganttChart').appendChild(endLabel);
+            }
+            animationState.currentIndex++;
+            const speed = parseInt($('speedSlider').value);
+            animationState.timeouts.push(setTimeout(animateNextBlock, speed));
+        }
+
+        function addProcessRow(p) {
+            const row = document.createElement('tr');
+            row.className = 'visible';
+            row.innerHTML = `<td><div class="flex items-center gap-2"><div class="color-dot" style="background: ${SOLID_COLORS[p.colorIndex]}"></div>${p.id}</div></td><td>${p.arrival}</td><td>${p.burst}</td><td>${p.priority}</td><td>${p.completion}</td><td>${p.turnaround}</td><td>${p.waiting}</td>`;
+            $('resultsBody').appendChild(row);
+
+            // Update statistics progressively
+            updateProgressiveStats();
+        }
+
+        function updateProgressiveStats() {
+            const { processData, shownProcesses, ganttData, currentIndex } = animationState;
+            const completedProcs = processData.filter(p => shownProcesses.has(p.id));
+            const n = completedProcs.length;
+            if (n === 0) return;
+
+            const avgW = (completedProcs.reduce((s, p) => s + p.waiting, 0) / n).toFixed(2);
+            const avgT = (completedProcs.reduce((s, p) => s + p.turnaround, 0) / n).toFixed(2);
+            const totalBurst = completedProcs.reduce((s, p) => s + p.burst, 0);
+            const currentTime = ganttData[currentIndex - 1]?.end || 0;
+            const util = currentTime > 0 ? ((totalBurst / currentTime) * 100).toFixed(1) : 0;
+
+            animateValue('avgWaitingTime', avgW);
+            animateValue('avgTurnaroundTime', avgT);
+            animateValue('totalProcesses', n + '/' + processData.length);
+            animateValue('cpuUtilization', util + '%');
+        }
+
+        function finishAnimation() {
+            animationState.running = false;
+            $('pauseBtn').disabled = true; $('runBtn').disabled = false;
+            // Don't call renderResults here - table is already populated during animation
+            renderStatistics({ processes: animationState.processData, ganttData: animationState.ganttData });
+        }
+
+        function togglePause() {
+            if (animationState.paused) {
+                animationState.paused = false;
+                $('pauseText').textContent = 'Pause';
+                $('pauseIcon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/>';
+                animateNextBlock();
+            } else {
+                animationState.paused = true;
+                $('pauseText').textContent = 'Resume';
+                $('pauseIcon').innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>';
+            }
+        }
+
+        function stopAnimation() {
+            animationState.timeouts.forEach(clearTimeout);
+            animationState.timeouts = [];
+            animationState.running = false; animationState.paused = false;
+        }
+
+        function resetAll() {
+            stopAnimation();
+            $('processInputs').innerHTML = '';
+            processCounter = 0;
+            $('ganttContainer').innerHTML = '<div class="empty-state"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="mx-auto"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg><p>Add processes and click "Run" to see the Gantt chart</p></div>';
+            $('processLegend').innerHTML = '';
+            $('resultsBody').innerHTML = '<tr><td colspan="7" class="text-center text-gray-500 py-8">No results yet.</td></tr>';
+            $('avgWaitingTime').textContent = '-'; $('avgTurnaroundTime').textContent = '-';
+            $('totalProcesses').textContent = '0'; $('cpuUtilization').textContent = '-';
+            $('currentTime').textContent = ''; $('progressFill').style.width = '0%';
+            $('pauseBtn').disabled = true; $('runBtn').disabled = false;
+        }
+
+        function scheduleFCFS(p) {
+            const procs = JSON.parse(JSON.stringify(p)).sort((a, b) => a.arrival - b.arrival);
+            const gantt = []; let t = 0;
+            for (const proc of procs) {
+                if (t < proc.arrival) { gantt.push({ process: 'Idle', start: t, end: proc.arrival }); t = proc.arrival; }
+                proc.completion = t + proc.burst;
+                gantt.push({ process: proc.id, start: t, end: proc.completion, colorIndex: proc.colorIndex });
+                t = proc.completion;
+                proc.turnaround = proc.completion - proc.arrival;
+                proc.waiting = proc.turnaround - proc.burst;
+            }
+            return { gantt, processes: procs };
+        }
+
+        function scheduleSJFNP(p) {
+            const procs = JSON.parse(JSON.stringify(p)), gantt = [], done = [];
+            let t = 0;
+            while (done.length < procs.length) {
+                const avail = procs.filter(x => x.arrival <= t && !done.includes(x.id));
+                if (!avail.length) { const next = procs.find(x => !done.includes(x.id)); gantt.push({ process: 'Idle', start: t, end: next.arrival }); t = next.arrival; continue; }
+                avail.sort((a, b) => a.burst - b.burst);
+                const proc = avail[0];
+                proc.completion = t + proc.burst;
+                gantt.push({ process: proc.id, start: t, end: proc.completion, colorIndex: proc.colorIndex });
+                t = proc.completion;
+                proc.turnaround = proc.completion - proc.arrival;
+                proc.waiting = proc.turnaround - proc.burst;
+                done.push(proc.id);
+            }
+            return { gantt, processes: procs };
+        }
+
+        function scheduleSJFP(p) {
+            const procs = JSON.parse(JSON.stringify(p)), gantt = [];
+            let t = 0, done = 0, n = procs.length;
+            while (done < n) {
+                const avail = procs.filter(x => x.arrival <= t && x.remaining > 0);
+                if (!avail.length) { const next = procs.find(x => x.remaining > 0); gantt.push({ process: 'Idle', start: t, end: next.arrival }); t = next.arrival; continue; }
+                avail.sort((a, b) => a.remaining - b.remaining);
+                const proc = avail[0];
+                const nextArr = procs.filter(x => x.arrival > t && x.remaining > 0).map(x => x.arrival).sort((a, b) => a - b)[0] || Infinity;
+                const run = Math.min(proc.remaining, nextArr - t);
+                gantt.push({ process: proc.id, start: t, end: t + run, colorIndex: proc.colorIndex });
+                proc.remaining -= run; t += run;
+                if (proc.remaining === 0) { proc.completion = t; proc.turnaround = proc.completion - proc.arrival; proc.waiting = proc.turnaround - proc.burst; done++; }
+            }
+            return { gantt: mergeGantt(gantt), processes: procs };
+        }
+
+        function scheduleRR(p, q) {
+            const procs = JSON.parse(JSON.stringify(p)).sort((a, b) => a.arrival - b.arrival);
+            const gantt = [], queue = [];
+            let t = 0, done = 0, n = procs.length, i = 0;
+            while (i < n && procs[i].arrival <= t) queue.push(procs[i++]);
+            while (done < n) {
+                if (!queue.length) { gantt.push({ process: 'Idle', start: t, end: procs[i].arrival }); t = procs[i].arrival; queue.push(procs[i++]); continue; }
+                const proc = queue.shift();
+                const run = Math.min(q, proc.remaining);
+                gantt.push({ process: proc.id, start: t, end: t + run, colorIndex: proc.colorIndex });
+                proc.remaining -= run; t += run;
+                while (i < n && procs[i].arrival <= t) queue.push(procs[i++]);
+                if (proc.remaining > 0) queue.push(proc);
+                else { proc.completion = t; proc.turnaround = proc.completion - proc.arrival; proc.waiting = proc.turnaround - proc.burst; done++; }
+            }
+            return { gantt, processes: procs };
+        }
+
+        function schedulePriorityNP(p) {
+            const procs = JSON.parse(JSON.stringify(p)), gantt = [], done = [];
+            let t = 0;
+            while (done.length < procs.length) {
+                const avail = procs.filter(x => x.arrival <= t && !done.includes(x.id));
+                if (!avail.length) { const next = procs.find(x => !done.includes(x.id)); gantt.push({ process: 'Idle', start: t, end: next.arrival }); t = next.arrival; continue; }
+                avail.sort((a, b) => a.priority - b.priority);
+                const proc = avail[0];
+                proc.completion = t + proc.burst;
+                gantt.push({ process: proc.id, start: t, end: proc.completion, colorIndex: proc.colorIndex });
+                t = proc.completion;
+                proc.turnaround = proc.completion - proc.arrival;
+                proc.waiting = proc.turnaround - proc.burst;
+                done.push(proc.id);
+            }
+            return { gantt, processes: procs };
+        }
+
+        function schedulePriorityP(p) {
+            const procs = JSON.parse(JSON.stringify(p)), gantt = [];
+            let t = 0, done = 0, n = procs.length;
+            while (done < n) {
+                const avail = procs.filter(x => x.arrival <= t && x.remaining > 0);
+                if (!avail.length) { const next = procs.find(x => x.remaining > 0); gantt.push({ process: 'Idle', start: t, end: next.arrival }); t = next.arrival; continue; }
+                avail.sort((a, b) => a.priority - b.priority);
+                const proc = avail[0];
+                const nextArr = procs.filter(x => x.arrival > t && x.remaining > 0).map(x => x.arrival).sort((a, b) => a - b)[0] || Infinity;
+                const run = Math.min(proc.remaining, nextArr - t);
+                gantt.push({ process: proc.id, start: t, end: t + run, colorIndex: proc.colorIndex });
+                proc.remaining -= run; t += run;
+                if (proc.remaining === 0) { proc.completion = t; proc.turnaround = proc.completion - proc.arrival; proc.waiting = proc.turnaround - proc.burst; done++; }
+            }
+            return { gantt: mergeGantt(gantt), processes: procs };
+        }
+
+        function mergeGantt(g) {
+            if (!g.length) return g;
+            const m = [g[0]];
+            for (let i = 1; i < g.length; i++) {
+                const last = m[m.length - 1];
+                if (last.process === g[i].process && last.end === g[i].start) last.end = g[i].end;
+                else m.push(g[i]);
+            }
+            return m;
+        }
+
+        function renderLegend(procs) {
+            $('processLegend').innerHTML = procs.map(p => `<div class="process-badge" style="background: ${PROCESS_COLORS[p.colorIndex]}">${p.id}</div>`).join('');
+        }
+
+        function renderResults(procs) {
+            let delay = 0;
+            $('resultsBody').innerHTML = procs.map(p => {
+                delay += 100;
+                return `<tr class="visible" style="animation-delay: ${delay}ms"><td><div class="flex items-center gap-2"><div class="color-dot" style="background: ${SOLID_COLORS[p.colorIndex]}"></div>${p.id}</div></td><td>${p.arrival}</td><td>${p.burst}</td><td>${p.priority}</td><td>${p.completion}</td><td>${p.turnaround}</td><td>${p.waiting}</td></tr>`;
+            }).join('');
+        }
+
+        function renderStatistics({ processes, ganttData }) {
+            const n = processes.length;
+            const avgW = (processes.reduce((s, p) => s + p.waiting, 0) / n).toFixed(2);
+            const avgT = (processes.reduce((s, p) => s + p.turnaround, 0) / n).toFixed(2);
+            const totalBurst = processes.reduce((s, p) => s + p.burst, 0);
+            const totalTime = ganttData[ganttData.length - 1].end;
+            const util = ((totalBurst / totalTime) * 100).toFixed(1);
+            animateValue('avgWaitingTime', avgW);
+            animateValue('avgTurnaroundTime', avgT);
+            animateValue('totalProcesses', n);
+            animateValue('cpuUtilization', util + '%');
+        }
+
+        function animateValue(id, val) {
+            const el = $(id);
+            el.textContent = val;
+            el.classList.add('counting');
+            setTimeout(() => el.classList.remove('counting'), 300);
+        }
+
+        // Init with sample processes
+        [0, 1, 2, 3].forEach(i => addProcess(i, [5, 3, 8, 2][i], [2, 1, 3, 4][i]));
+
+        // Modal definitions
+        const DEFINITIONS = {
+            waiting: {
+                title: 'Waiting Time',
+                body: `<p>The time a process spends waiting in the ready queue before it gets CPU time.</p>
+                       <p style="margin-top: 8px;">Lower waiting time means better system responsiveness.</p>
+                       <div class="modal-formula">Waiting Time = Turnaround Time - Burst Time</div>`
+            },
+            turnaround: {
+                title: 'Turnaround Time',
+                body: `<p>The total time taken from process arrival to its completion.</p>
+                       <p style="margin-top: 8px;">It includes waiting time plus execution time.</p>
+                       <div class="modal-formula">Turnaround Time = Completion Time - Arrival Time</div>`
+            },
+            processes: {
+                title: 'Total Processes',
+                body: `<p>The total number of processes in the scheduling simulation.</p>
+                       <p style="margin-top: 8px;">During animation, it shows completed/total (e.g., "2/4" means 2 of 4 processes have finished).</p>`
+            },
+            cpu: {
+                title: 'CPU Utilization',
+                body: `<p>The percentage of time the CPU is actively executing processes (not idle).</p>
+                       <p style="margin-top: 8px;">Higher utilization means the CPU is being used efficiently.</p>
+                       <div class="modal-formula">CPU Utilization = (Total Burst Time / Total Time) × 100%</div>`
+            }
+        };
+
+        function showModal(type) {
+            const def = DEFINITIONS[type];
+            if (!def) return;
+            $('modalTitle').textContent = def.title;
+            $('modalBody').innerHTML = def.body;
+            $('infoModal').classList.add('active');
+        }
+
+        function hideModal() {
+            $('infoModal').classList.remove('active');
+        }
+
+        function closeModal(event) {
+            if (event.target === $('infoModal')) {
+                hideModal();
+            }
+        }
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') hideModal();
+        });
+    </script>
+</body>
+
+</html>
