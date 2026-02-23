@@ -3,7 +3,7 @@ name: Deploy Image.html to EC2 (Ubuntu + Nginx)
 on:
   push:
     branches:
-      - demo
+      - labs-branch-html
   workflow_dispatch:
 
 jobs:
@@ -24,11 +24,11 @@ jobs:
         run: |
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy Images.html to EC2 nginx root
+      - name: Deploy index.html to EC2 nginx root
         run: |
-          scp -i ~/.ssh/ec2_key.pem Images.html ubuntu@${{ secrets.EC2_HOST }}:/tmp/Images.html
+          scp -i ~/.ssh/ec2_key.pem index.html ubuntu@${{ secrets.EC2_HOST }}:/tmp/index.html
 
           ssh -i ~/.ssh/ec2_key.pem ubuntu@${{ secrets.EC2_HOST }} "
-            sudo mv /tmp/Images.html /var/www/html/Images.html &&
+            sudo mv /tmp/index.html /var/www/html/index.html &&
             sudo systemctl restart nginx
           "
