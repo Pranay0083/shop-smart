@@ -4,6 +4,7 @@
   "description": "Backend API for ShopSmart",
   "main": "src/index.js",
   "scripts": {
+    "build": "echo 'cannot build anything, everything is perfectly fine trust me bro'",
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "jest",
