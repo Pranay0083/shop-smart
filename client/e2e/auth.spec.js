@@ -488,10 +488,10 @@ test.describe('E2E - Button Click Tests', () => {
     await page.goto('/login');
     await page.fill('[data-testid="email-input"]', 'test@example.com');
     await page.fill('[data-testid="password-input"]', 'password');
-    await page.click('[data-testid="login-button"]');
-
     // Wait for the API call
-    await page.waitForResponse('**/api/auth/login');
+    const responsePromise = page.waitForResponse('**/api/auth/login');
+    await page.click('[data-testid="login-button"]');
+    await responsePromise;
 
     expect(loginClicked).toBe(true);
   });
@@ -514,10 +514,10 @@ test.describe('E2E - Button Click Tests', () => {
     await page.fill('[data-testid="email-input"]', 'test@example.com');
     await page.fill('[data-testid="password-input"]', 'password123');
     await page.fill('[data-testid="confirm-password-input"]', 'password123');
-    await page.click('[data-testid="signup-button"]');
-
     // Wait for the API call
-    await page.waitForResponse('**/api/auth/signup');
+    const responsePromise = page.waitForResponse('**/api/auth/signup');
+    await page.click('[data-testid="signup-button"]');
+    await responsePromise;
 
     expect(signupClicked).toBe(true);
   });
