@@ -30,7 +30,7 @@ jobs:
         run: npm ci # 'npm ci' is faster and more reliable in CI environments
 
       - name: Run Tests
-        run: npm test -- --watchAll=false # Assuming you have a test script
+        run: npm test -- --run # Assuming you have a test script
 
       - name: Build Client
         run: npm run build
