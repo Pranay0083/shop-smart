@@ -19,7 +19,6 @@ import { server } from '../mocks/server';
 import { AppRoutes } from '../../App';
 import Login from '../../pages/Login';
 import Signup from '../../pages/Signup';
-import Home from '../../pages/Home';
 import { AuthProvider } from '../../context/AuthContext';
 
 // Setup MSW
