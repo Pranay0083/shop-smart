@@ -14,10 +14,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeAll, afterAll, afterEach, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { http, HttpResponse } from 'msw';
 import { server } from '../mocks/server';
 import { AppRoutes } from '../../App';
 import Login from '../../pages/Login';
 import Signup from '../../pages/Signup';
+import Home from '../../pages/Home';
 import { AuthProvider } from '../../context/AuthContext';
 
 // Setup MSW
@@ -123,6 +125,26 @@ describe('Integration Tests - Login Flow', () => {
     await waitFor(() => {
       expect(loginButton).toHaveTextContent(/Logging in|Login/);
     });
+  });
+
+  it('should display network error message when login request fails', async () => {
+    // Override the handler to simulate a network failure
+    server.use(
+      http.post('*/api/auth/login', () => HttpResponse.error())
+    );
+
+    const user = userEvent.setup();
+    renderWithRouter(<Login />);
+
+    await user.type(screen.getByTestId('email-input'), 'john@example.com');
+    await user.type(screen.getByTestId('password-input'), 'password123');
+    await user.click(screen.getByTestId('login-button'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/network error/i);
+    });
+
+    expect(localStorage.getItem('token')).toBeNull();
   });
 });
 
@@ -251,6 +273,26 @@ describe('Integration Tests - Signup Flow', () => {
       { timeout: 3000 }
     );
   });
+
+  it('should display network error message when signup request fails', async () => {
+    server.use(
+      http.post('*/api/auth/signup', () => HttpResponse.error())
+    );
+
+    const user = userEvent.setup();
+    renderWithRouter(<Signup />);
+
+    await user.type(screen.getByTestId('email-input'), 'newuser@example.com');
+    await user.type(screen.getByTestId('password-input'), 'password123');
+    await user.type(screen.getByTestId('confirm-password-input'), 'password123');
+    await user.click(screen.getByTestId('signup-button'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(/network error/i);
+    });
+
+    expect(localStorage.getItem('token')).toBeNull();
+  });
 });
 
 describe('Integration Tests - App Routing', () => {
@@ -305,5 +347,75 @@ describe('Integration Tests - Health Check API', () => {
     });
 
     expect(screen.getByText(/ShopSmart Backend is running/)).toBeInTheDocument();
+  });
+});
+
+describe('Integration Tests - Authenticated Session', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('should show welcome message when a valid token is already in localStorage', async () => {
+    // Pre-seed a mock token that matches the MSW handler's expected format
+    // The MSW /api/auth/me handler extracts user id from token: mock-jwt-token-{id}-...
+    localStorage.setItem('token', 'mock-jwt-token-1-john@example.com-123456');
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppRoutes />
+      </MemoryRouter>
+    );
+
+    // The AuthProvider fetches /api/auth/me on mount; MSW returns John's data
+    await waitFor(() => {
+      expect(screen.getByText(/Welcome/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('logout-button')).toBeInTheDocument();
+  });
+
+  it('should clear the token and show login/signup links after logout', async () => {
+    localStorage.setItem('token', 'mock-jwt-token-1-john@example.com-123456');
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppRoutes />
+      </MemoryRouter>
+    );
+
+    // Wait for authenticated state
+    await waitFor(() => {
+      expect(screen.getByTestId('logout-button')).toBeInTheDocument();
+    });
+
+    // Click logout
+    await userEvent.setup().click(screen.getByTestId('logout-button'));
+
+    // Token should be removed
+    await waitFor(() => {
+      expect(localStorage.getItem('token')).toBeNull();
+    });
+
+    // Should show nav links again
+    expect(screen.getByTestId('login-link')).toBeInTheDocument();
+    expect(screen.getByTestId('signup-link')).toBeInTheDocument();
+  });
+
+  it('should clear invalid token and show unauthenticated state', async () => {
+    // Put a clearly invalid token format in localStorage
+    localStorage.setItem('token', 'completely-invalid-token');
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppRoutes />
+      </MemoryRouter>
+    );
+
+    // MSW will reject the invalid token; AuthProvider logs out
+    await waitFor(() => {
+      expect(screen.getByTestId('login-link')).toBeInTheDocument();
+    });
+
+    expect(localStorage.getItem('token')).toBeNull();
   });
 });

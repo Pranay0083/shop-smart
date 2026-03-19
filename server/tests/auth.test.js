@@ -7,6 +7,7 @@
  */
 
 const request = require('supertest');
+const jwt = require('jsonwebtoken');
 const app = require('../src/app');
 
 // Mock Prisma
@@ -182,6 +183,63 @@ describe('Auth API Tests', () => {
 
       expect(res.statusCode).toBe(401);
       expect(res.body.message).toBe('No token provided');
+    });
+
+    it('should return user data for a valid JWT token', async () => {
+      const mockUser = {
+        id: 42,
+        email: 'validuser@example.com',
+        firstName: 'Valid',
+        lastName: 'User',
+        createdAt: new Date()
+      };
+
+      // Sign a real JWT with the default secret the app uses
+      const token = jwt.sign(
+        { userId: mockUser.id, email: mockUser.email },
+        process.env.JWT_SECRET || 'default-secret',
+        { expiresIn: '1h' }
+      );
+
+      prisma.user.findUnique.mockResolvedValue(mockUser);
+
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.user.email).toBe(mockUser.email);
+      expect(res.body.data.user.firstName).toBe(mockUser.firstName);
+    });
+
+    it('should return 401 for a tampered / invalid Bearer token', async () => {
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', 'Bearer this.is.not.a.valid.jwt');
+
+      expect(res.statusCode).toBe(401);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toBe('Invalid or expired token');
+    });
+
+    it('should return 404 when token is valid but user no longer exists', async () => {
+      const token = jwt.sign(
+        { userId: 9999, email: 'ghost@example.com' },
+        process.env.JWT_SECRET || 'default-secret',
+        { expiresIn: '1h' }
+      );
+
+      // Simulate the user having been deleted from the DB
+      prisma.user.findUnique.mockResolvedValue(null);
+
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(404);
+      expect(res.body.success).toBe(false);
+      expect(res.body.message).toBe('User not found');
     });
   });
 });

@@ -1,0 +1,7 @@
+node_modules
+dist
+coverage
+client/playwright-report
+client/test-results
+server/prisma/dev.db
+server/prisma/dev.db-journal
