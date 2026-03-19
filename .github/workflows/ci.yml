@@ -22,6 +22,18 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Navigate to client
+        run: cd ./client
+          
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Navigate to server
+        run: cd ../server
+          
       - name: Install dependencies
         run: npm install
 
