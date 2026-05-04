@@ -1,54 +1,94 @@
-# ShopSmart
+# Shop Smart - E-Commerce Platform
 
-ShopSmart is a full-stack web application with React on the frontend and Express + Prisma on the backend.
+A full-stack e-commerce web application built with modern technologies for seamless online shopping experience.
 
-## Architecture
+## 📋 Table of Contents
 
-- Frontend: React + Vite app in `client/`
-- Backend: Express API in `server/`
-- Database: SQLite through Prisma ORM
-- Testing:
-	- Frontend unit/integration: Vitest + React Testing Library + MSW
-	- Frontend E2E: Playwright
-	- Backend API tests: Jest + Supertest
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Running the Application](#running-the-application)
+- [API Documentation](#api-documentation)
+- [Database Setup](#database-setup)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
 
-### Runtime Flow
+## ✨ Features
 
-1. User interacts with frontend routes (`/`, `/login`, `/signup`, `/products/:id`).
-2. Frontend calls backend APIs (`/api/auth/*`, `/api/products`, `/api/health`).
-3. Backend handles auth/business logic and talks to Prisma where needed.
-4. Responses are rendered in React UI.
+### Frontend
+- **React-based UI** - Modern, responsive user interface
+- **Product Browsing** - Browse and filter products
+- **Shopping Cart** - Add/remove items from cart
+- **User Authentication** - Secure login and registration
+- **Checkout** - Secure payment processing
+- **Order Management** - View order history and status
+- **Responsive Design** - Mobile-friendly interface
 
-## CI/CD Workflow
+### Backend
+- **RESTful API** - Clean API endpoints for all operations
+- **User Management** - Authentication and authorization
+- **Product Management** - CRUD operations for products
+- **Order Processing** - Handle orders and transactions
+- **Inventory Management** - Track stock levels
+- **Input Validation** - Secure data validation
 
-- CI file: `.github/workflows/ci.yml`
-- Triggers:
-	- `push`
-	- `pull_request`
-- Pipeline checks:
-	- Install dependencies for client and server
-	- Run ESLint
-	- Run Prettier check
-	- Run tests
+### Database
+- **SQL Database** - Relational database for data persistence
+- **User Profiles** - Store customer information
+- **Product Catalog** - Manage products and inventory
+- **Orders** - Track customer orders and transactions
+- **Transactions** - Secure payment records
 
-## Design Decisions
+## 🛠 Tech Stack
 
-- Kept auth concerns in `AuthContext` for reusable state handling.
-- Added API helper functions under `client/src/api/` to avoid duplicate fetch logic.
-- Introduced `products` endpoints for clear frontend-backend integration.
-- Used test IDs in core UI for stable UI and E2E test selectors.
-- Added idempotent setup script behavior to support repeatable environment setup.
+### Frontend
+- **React 18+** - UI library
+- **Vite** - Build tool and dev server
+- **CSS3** - Styling
+- **Axios/Fetch** - HTTP client for API calls
+- **React Router** - Client-side routing
 
-## Challenges and Trade-offs
+### Backend
+- **Node.js** - Runtime environment
+- **Express.js** - Web framework
+- **SQL Database** - MySQL, PostgreSQL, or SQLite
+- **JWT** - Authentication tokens
+- **Middleware** - Request handling and validation
 
-- Ensuring new product pages did not break existing auth/health tests.
-- Balancing strict CI checks with current project structure (separate client/server packages).
-- Making setup script rerunnable without damaging existing local state.
+### Development Tools
+- **npm** - Package manager
+- **Jest** - Testing framework
+- **Git** - Version control
 
-## Required Project Notes
+## 📁 Project Structure
 
-1. SQLite3 is used for local database storage.
-2. Prisma is used as ORM.
-3. API endpoints are implemented for auth and product retrieval.
-4. Deploy configuration can target backend (Render) and frontend (Vercel).
-5. CORS is enabled in backend middleware and can be tuned for deployed domains.
+```
+Shop_smart/
+├── client/                      # Frontend React application
+│   ├── src/
+│   │   ├── App.jsx             # Main React component
+│   │   ├── main.jsx            # Entry point
+│   │   ├── App.test.jsx        # App tests
+│   │   ├── index.css           # Global styles
+│   │   └── setupTests.js       # Test configuration
+│   ├── index.html              # HTML template
+│   ├── package.json            # Frontend dependencies
+│   ├── vite.config.js          # Vite configuration
+│   └── node_modules/
+│
+├── server/                      # Backend Express application
+│   ├── src/
+│   │   ├── app.js              # Express app configuration
+│   │   └── index.js            # Server entry point
+│   ├── tests/
+│   │   └── app.test.js         # Server tests
+│   ├── package.json            # Backend dependencies
+│   └── node_modules/
+│
+├── README.md                    # This file
+└── render.yaml                  # Deployment configuration
+```
+

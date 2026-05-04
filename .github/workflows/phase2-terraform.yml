@@ -1,0 +1,47 @@
+name: Phase 2 - Terraform Provisioning
+
+on:
+  workflow_run:
+    workflows: ["Phase 1 - Testing"]
+    types:
+      - completed
+
+jobs:
+  terraform:
+    name: Terraform Init, Validate, Plan, Apply
+    runs-on: ubuntu-latest
+    # Only run if the tests passed successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    env:
+      TF_VAR_database_url: ${{ secrets.DATABASE_URL }}
+      TF_VAR_direct_url: ${{ secrets.DIRECT_URL }}
+      TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+    defaults:
+      run:
+        working-directory: ./terraform
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
