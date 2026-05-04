@@ -1,37 +1,30 @@
-FROM node:20-alpine AS build
-
+# Stage 1: Build
+FROM node:20 AS builder
 WORKDIR /app
 
-RUN apk add --no-cache openssl
+COPY package*.json ./
+RUN npm install
 
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY . .
 
-COPY prisma ./prisma
+# generate prisma client for linux (same env)
 RUN npx prisma generate
 
-COPY src ./src
 
-RUN npm prune --omit=dev
-
-FROM node:20-alpine
-
+# Stage 2: Production
+FROM node:20
 WORKDIR /app
 
-RUN apk add --no-cache openssl curl
+COPY package*.json ./
+RUN npm ci --only=production
 
-ENV NODE_ENV=production
+# copy full app (safer)
+COPY --from=builder /app ./
 
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/src ./src
-COPY package.json ./
-
-USER node
+# security
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
 
 EXPOSE 5001
 
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-	CMD curl -f http://localhost:5001/api/health || exit 1
-
-CMD ["node", "src/index.js"]
+CMD ["node", "src/server.js"]
